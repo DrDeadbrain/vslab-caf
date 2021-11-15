@@ -26,6 +26,13 @@ CAF_POP_WARNINGS
 #include "int512_serialization.hpp"
 #include "is_probable_prime.hpp"
 #include "types.hpp"
+#include "calc/calculator.h"
+
+#define SERVER_IP "localhost"
+#define SERVER_PORT 5555
+#define NUM_WORKER 5 //fix number of workers
+#define MODE "server" // "client" // "worker"
+
 
 using std::cerr;
 using std::cout;
@@ -39,13 +46,16 @@ using boost::multiprecision::int512_t;
 
 using namespace caf;
 
+
+
+
 namespace {
 
 struct config : actor_system_config {
-  string host = "localhost";
-  uint16_t port = 0;
-  size_t num_workers = 0;
-  string mode;
+  string host = SERVER_IP;
+  uint16_t port = SERVER_PORT;
+  size_t num_workers = NUM_WORKER;
+  string mode = MODE;
   config() {
     opt_group{custom_options_, "global"}
       .add(host, "host,H", "server host (ignored in server mode)")
@@ -124,26 +134,6 @@ void run_worker(actor_system& sys, const config& cfg) {
 
 // dispatches to run_* function depending on selected mode
 void caf_main(actor_system& sys, const config& cfg) {
-  // Check serialization implementation. You can delete this.
-  auto check_roundtrip = [&](int512_t a) {
-    byte_buffer buf;
-    binary_serializer sink{sys, buf};
-    assert(sink.apply(a));
-    binary_deserializer source{sys, buf};
-    int512_t a_copy;
-    assert(source.apply(a_copy));
-    assert(a == a_copy);
-  };
-  check_roundtrip(1234912948123);
-  check_roundtrip(-124);
-
-  int512_t n = 1;
-  for (int512_t i = 2; i <= 50; ++i)
-    n *= i;
-  check_roundtrip(n);
-  n *= -1;
-  check_roundtrip(n);
-
   // Dispatch to function based on mode.
   using map_t = unordered_map<string, void (*)(actor_system&, const config&)>;
   map_t modes{

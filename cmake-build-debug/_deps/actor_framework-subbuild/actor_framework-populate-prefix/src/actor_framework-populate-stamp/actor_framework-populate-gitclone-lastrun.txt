@@ -1,0 +1,3 @@
+repository='https://github.com/actor-framework/actor-framework.git'
+module=''
+tag='origin'
