@@ -1,7 +1,5 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/vslab.dir/src/calc/calculator.cpp.o"
   "CMakeFiles/vslab.dir/src/int512_serialization.cpp.o"
-  "CMakeFiles/vslab.dir/src/main.cpp.o"
   "vslab"
   "vslab.pdb"
 )

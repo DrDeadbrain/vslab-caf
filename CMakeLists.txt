@@ -31,7 +31,7 @@ include_directories(. include  ${CMAKE_CURRENT_SOURCE_DIR}/third_party ${CAF_INC
 
 set(SOURCES
     src/int512_serialization.cpp
-    src/main.cpp src/calc/calculator.cpp src/calc/calculator.h)
+    )
 
 file(GLOB HEADERS "include/*.hpp")
 

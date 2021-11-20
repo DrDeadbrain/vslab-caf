@@ -2263,16 +2263,7 @@
 		<Unit filename="/home/baal/Dokumente/Repos/vslab-caf/include/types.hpp">
 			<Option target="vslab"/>
 		</Unit>
-		<Unit filename="/home/baal/Dokumente/Repos/vslab-caf/src/calc/calculator.cpp">
-			<Option target="vslab"/>
-		</Unit>
-		<Unit filename="/home/baal/Dokumente/Repos/vslab-caf/src/calc/calculator.h">
-			<Option target="vslab"/>
-		</Unit>
 		<Unit filename="/home/baal/Dokumente/Repos/vslab-caf/src/int512_serialization.cpp">
-			<Option target="vslab"/>
-		</Unit>
-		<Unit filename="/home/baal/Dokumente/Repos/vslab-caf/src/main.cpp">
 			<Option target="vslab"/>
 		</Unit>
 		<Unit filename="/home/baal/Dokumente/Repos/vslab-caf/CMakeLists.txt">

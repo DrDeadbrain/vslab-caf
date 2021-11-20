@@ -213,30 +213,6 @@ libcaf_io/fast:
 	$(MAKE) $(MAKESILENT) -f _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/build.make _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/build
 .PHONY : libcaf_io/fast
 
-src/calc/calculator.o: src/calc/calculator.cpp.o
-.PHONY : src/calc/calculator.o
-
-# target to build an object file
-src/calc/calculator.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/vslab.dir/build.make CMakeFiles/vslab.dir/src/calc/calculator.cpp.o
-.PHONY : src/calc/calculator.cpp.o
-
-src/calc/calculator.i: src/calc/calculator.cpp.i
-.PHONY : src/calc/calculator.i
-
-# target to preprocess a source file
-src/calc/calculator.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/vslab.dir/build.make CMakeFiles/vslab.dir/src/calc/calculator.cpp.i
-.PHONY : src/calc/calculator.cpp.i
-
-src/calc/calculator.s: src/calc/calculator.cpp.s
-.PHONY : src/calc/calculator.s
-
-# target to generate assembly for a file
-src/calc/calculator.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/vslab.dir/build.make CMakeFiles/vslab.dir/src/calc/calculator.cpp.s
-.PHONY : src/calc/calculator.cpp.s
-
 src/int512_serialization.o: src/int512_serialization.cpp.o
 .PHONY : src/int512_serialization.o
 
@@ -261,30 +237,6 @@ src/int512_serialization.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vslab.dir/build.make CMakeFiles/vslab.dir/src/int512_serialization.cpp.s
 .PHONY : src/int512_serialization.cpp.s
 
-src/main.o: src/main.cpp.o
-.PHONY : src/main.o
-
-# target to build an object file
-src/main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/vslab.dir/build.make CMakeFiles/vslab.dir/src/main.cpp.o
-.PHONY : src/main.cpp.o
-
-src/main.i: src/main.cpp.i
-.PHONY : src/main.i
-
-# target to preprocess a source file
-src/main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/vslab.dir/build.make CMakeFiles/vslab.dir/src/main.cpp.i
-.PHONY : src/main.cpp.i
-
-src/main.s: src/main.cpp.s
-.PHONY : src/main.s
-
-# target to generate assembly for a file
-src/main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/vslab.dir/build.make CMakeFiles/vslab.dir/src/main.cpp.s
-.PHONY : src/main.cpp.s
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -301,15 +253,9 @@ help:
 	@echo "... libcaf_core"
 	@echo "... libcaf_io"
 	@echo "... vslab"
-	@echo "... src/calc/calculator.o"
-	@echo "... src/calc/calculator.i"
-	@echo "... src/calc/calculator.s"
 	@echo "... src/int512_serialization.o"
 	@echo "... src/int512_serialization.i"
 	@echo "... src/int512_serialization.s"
-	@echo "... src/main.o"
-	@echo "... src/main.i"
-	@echo "... src/main.s"
 .PHONY : help
 
 

@@ -129,11 +129,11 @@ _deps/actor_framework-build/libcaf_io/clean: _deps/actor_framework-build/libcaf_
 # Target rules for target CMakeFiles/vslab.dir
 
 # All Build rule for target.
-CMakeFiles/vslab.dir/all: _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/all
 CMakeFiles/vslab.dir/all: _deps/actor_framework-build/libcaf_core/CMakeFiles/libcaf_core.dir/all
+CMakeFiles/vslab.dir/all: _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vslab.dir/build.make CMakeFiles/vslab.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vslab.dir/build.make CMakeFiles/vslab.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/CMakeFiles --progress-num=98,99,100 "Built target vslab"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/CMakeFiles --progress-num=99,100 "Built target vslab"
 .PHONY : CMakeFiles/vslab.dir/all
 
 # Build rule for subdir invocation for target.
@@ -211,12 +211,12 @@ _deps/actor_framework-build/libcaf_core/CMakeFiles/libcaf_core.dir/clean:
 _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/all: _deps/actor_framework-build/libcaf_core/CMakeFiles/libcaf_core.dir/all
 	$(MAKE) $(MAKESILENT) -f _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/build.make _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/depend
 	$(MAKE) $(MAKESILENT) -f _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/build.make _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/CMakeFiles --progress-num=77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97 "Built target libcaf_io"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/CMakeFiles --progress-num=77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98 "Built target libcaf_io"
 .PHONY : _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/all
 
 # Build rule for subdir invocation for target.
 _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/CMakeFiles 97
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/CMakeFiles 98
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/CMakeFiles 0
 .PHONY : _deps/actor_framework-build/libcaf_io/CMakeFiles/libcaf_io.dir/rule
