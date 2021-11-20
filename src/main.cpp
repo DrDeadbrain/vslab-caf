@@ -26,7 +26,7 @@ CAF_POP_WARNINGS
 #include "int512_serialization.hpp"
 #include "is_probable_prime.hpp"
 #include "types.hpp"
-#include "calc/calculator.h"
+
 
 #define SERVER_IP "localhost"
 #define SERVER_PORT 5555
@@ -74,13 +74,12 @@ using namespace caf;
 //big numbers inc
 int512_t Z1 = 8806715679; // 3 * 29 * 29 * 71 * 211 * 233
 int512_t Z2 = 0x826efbb5b4c665b9; // 9398726230209357241; // 443 * 503 * 997 * 1511 * 3541 * 7907
-int512_t Z3 = 0xc72af6a83cc2d3984fedbe6c1d15e542556941e7;
+//int512_t Z3 = 0xc72af6a83cc2d3984fedbe6c1d15e542556941e7;
 /*
 Z3 = 1137047281562824484226171575219374004320812483047 =
 7907 * 12391 * 12553 * 156007 * 191913031 * 4302407713 * 7177162612387
 */
-int512_t Z4 =
-        0x1aa0d675bd49341ccc03fff7170f29cd7048bf40430c22ced5a391d015d19677bde78a7b95b5d59b6b26678238fa7;
+//int512_t Z4 = 0x1aa0d675bd49341ccc03fff7170f29cd7048bf40430c22ced5a391d015d19677bde78a7b95b5d59b6b26678238fa7;
 /*
 Z4 = 1000602106143806596478722974273666950903906112131794745457338659266842446985022076792112309173975243506969710503
    =
@@ -120,7 +119,7 @@ struct config : actor_system_config {
      return u;
  }
 
- int 512_t modular_pow(int512_t base, int512_t exponent, int512_t modulus) {
+ int512_t modular_pow(int512_t base, int512_t exponent, int512_t modulus) {
      /*init result*/
      int512_t result = 1;
 
@@ -140,13 +139,13 @@ struct config : actor_system_config {
      std::mt19937 mt_rand(time(0));
 
      //no prime divisor for 1
-     if (n == 1) return N;
+     if (N == 1) return N;
 
      //even number means one of the divisors is 2
      if (N % 2 == 0) return int512_t(2);
 
      //we will pick from range [2, N)
-     int512_t x = (mt_rand() % (n-2)) + 2;
+     int512_t x = (mt_rand() % (N-2)) + 2;
      int512_t y = x;
 
      /*
@@ -154,7 +153,7 @@ struct config : actor_system_config {
       * algorithm can be re-run with a different c
       * if it throws failure for a composite
       **/
-     int512_t c = (mt_rand() % (n-1)) + 1;
+     int512_t c = (mt_rand() % (N-1)) + 1;
 
      //init candidate divisor (or result)
      int512_t d = int512_t(1);
@@ -172,27 +171,12 @@ struct config : actor_system_config {
          d = gcd(abs(x - y), N);
 
          /* retry if the algo fails to find prime factor with chosen x and c */
-         if (d == n) return pRho(N);
+         if (d == N) return pRho(N);
      }
      return d;
  }
 
- /**
-  * Atom defines : Messages that we need
-  */
 
- //CLIENT TO CLIENT OVER GRP
- using init_num_atom = atom_constant<atom("Init check");
- using done_msg_atom = atom_constant<atom("Done");
-
- //CLIENT TO WORKER OVER GRP
- using new_num_atom = atom_constant<atom("new number");
- using client_num_atom = atom_constant<atom("Client number");
- using block_false_atom = atom_constant<atom("set blocked false");
-
- //WORKER TO CLIENT OVER GRP
- using result_atom = atom_constant<atom("result");
- using give_number_atom = atom_constant<atom("give me new number"); //pull if new worker comes i
 
 // -- CLIENT -------------------------------------------------------------------
 
@@ -247,13 +231,13 @@ behavior client(stateful_actor<client_state>* self, caf::group grp) {
         task = Z2;
     }
     if (task == -3) {
-        task = Z3;
+        task = Z1;
     }
     if (task == -4) {
-        task = Z4;
+        task = Z2;
     }
     self->state.beginW = std::chrono::steady_clock::now();
-    self->send(grp, init_num_atom::value, task);
+    self->send(grp, init_num_atom_v, task);
 
 
     return {
@@ -265,9 +249,9 @@ behavior client(stateful_actor<client_state>* self, caf::group grp) {
 
                     //check if number is prime or 2
                     if (is_probable_prime(task) || task == 2) {
-                        self->send(grp, done_msg_atom::value, task);
+                        self->send(grp, done_msg_atom_v, task);
                     } else {
-                        self->send(grp, new_num_atom::value, task);
+                        self->send(grp, new_num_atom_v, task);
                     }
                 }
             },
@@ -284,10 +268,10 @@ behavior client(stateful_actor<client_state>* self, caf::group grp) {
 
                         //check if done
                         if (is_probable_prime(currentProblem) || currentProblem == 2) {
-                            self->send(grp, done_msg_atom::value, currentProblem);
-                            break; // no idea if this works?????!!?!?!?!??!?!? TODO: CHECK IF WORKS
+                            self->send(grp, done_msg_atom_v, currentProblem);
+                        } else {
+                            self->send(grp, client_num_atom_v, currentProblem);
                         }
-                        self->send(grp, client_num_atom::value, currentProblem);
                     }
                 }
             },
@@ -308,7 +292,7 @@ behavior client(stateful_actor<client_state>* self, caf::group grp) {
                 self->state.problems.clear();
                 self->state.usedCPUTime = 0;
                 self->state.usedWallTime = 0;
-                self->send(grp, block_false_atom);
+                self->send(grp, block_false_atom_v);
             }
     };
 }
@@ -349,28 +333,29 @@ behavior worker(stateful_actor<worker_state>* self, caf::group grp) {
           self->state.blocked = true;
 
           std::clock_t c_start = std::clock();
-          auto t_start = std:::chrono::steady_clock::now();
+          auto t_start = std::chrono::steady_clock::now();
 
-          int 512_t fac = pRho(N);
+          int512_t fac = pRho(N);
 
           std::clock_t c_end = std::clock();
           auto t_end = std::chrono::steady_clock::now();
           double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
-          self->send(grp, result_atom::value, fac, N, cpu_time_used);
+          self->send(grp, result_atom_v, fac, N, cpu_time_used);
 
       },
       [=](client_num_atom, int512_t N) {
           std::clock_t c_start = std::clock();
-          auto t_start = std:::chrono::steady_clock::now();
+          auto t_start = std::chrono::steady_clock::now();
 
-          int 512_t fac = pRho(N);
+
+          int512_t fac = pRho(N);
 
           std::clock_t c_end = std::clock();
           auto t_end = std::chrono::steady_clock::now();
           double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
-          self->send(grp, result_atom::value, fac, N, cpu_time_used);
+          self->send(grp, result_atom_v, fac, N, cpu_time_used);
       },
       [=](block_false_atom) {
           self->state.blocked = false;
@@ -419,6 +404,6 @@ void caf_main(actor_system& sys, const config& cfg) {
   }
 }
 
-} // namespace
+ // namespace
 
 CAF_MAIN(io::middleman, id_block::vslab)

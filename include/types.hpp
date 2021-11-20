@@ -19,4 +19,17 @@ CAF_ADD_TYPE_ID(vslab, (std::vector<boost::multiprecision::int512_t>))
 
 CAF_ADD_ATOM(vslab, calc_atom)
 
+//CLIENT TO CLIENT OVER GRP
+CAF_ADD_ATOM(vslab, init_num_atom);
+CAF_ADD_ATOM(vslab, done_msg_atom);
+
+//CLIENT TO WORKER OVER GRP
+CAF_ADD_ATOM(vslab, new_num_atom);
+CAF_ADD_ATOM(vslab, client_num_atom);
+CAF_ADD_ATOM(vslab, block_false_atom);
+
+//WORKER TO CLIENT OVER GRP
+CAF_ADD_ATOM(vslab, result_atom);
+CAF_ADD_ATOM(vslab, give_number_atom);
+
 CAF_END_TYPE_ID_BLOCK(vslab)

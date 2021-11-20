@@ -2266,6 +2266,9 @@
 		<Unit filename="/home/baal/Dokumente/Repos/vslab-caf/src/int512_serialization.cpp">
 			<Option target="vslab"/>
 		</Unit>
+		<Unit filename="/home/baal/Dokumente/Repos/vslab-caf/src/main.cpp">
+			<Option target="vslab"/>
+		</Unit>
 		<Unit filename="/home/baal/Dokumente/Repos/vslab-caf/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\"/>
 		</Unit>

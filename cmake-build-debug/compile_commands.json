@@ -5,6 +5,11 @@
   "file": "/home/baal/Dokumente/Repos/vslab-caf/src/int512_serialization.cpp"
 },
 {
+  "directory": "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug",
+  "command": "/usr/bin/c++  -I/home/baal/Dokumente/Repos/vslab-caf/. -I/home/baal/Dokumente/Repos/vslab-caf/include -I/home/baal/Dokumente/Repos/vslab-caf/third_party -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_core -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_core -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_io -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_io -g -pthread -std=gnu++17 -o CMakeFiles/vslab.dir/src/main.cpp.o -c /home/baal/Dokumente/Repos/vslab-caf/src/main.cpp",
+  "file": "/home/baal/Dokumente/Repos/vslab-caf/src/main.cpp"
+},
+{
   "directory": "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_core",
   "command": "/usr/bin/c++ -Dlibcaf_core_EXPORTS -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_core -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_core -g -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -pthread -Wall -Wextra -pedantic -ftemplate-depth=512 -ftemplate-backtrace-limit=0 -Wno-missing-field-initializers -std=gnu++17 -o CMakeFiles/libcaf_core.dir/src/abstract_actor.cpp.o -c /home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_core/src/abstract_actor.cpp",
   "file": "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_core/src/abstract_actor.cpp"
