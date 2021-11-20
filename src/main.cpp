@@ -30,8 +30,8 @@ CAF_POP_WARNINGS
 
 #define SERVER_IP "localhost"
 #define SERVER_PORT 5555
-#define NUM_WORKER 5 //fix number of workers
-#define MODE "server" // "client" // "worker"
+#define NUM_WORKER 4 //fix number of workers
+#define MODE "client" //"worker" //"server"
 
 
 using std::cerr;
@@ -64,10 +64,6 @@ using namespace caf;
  *    ->weitere instanz (wie server, client, worker) : Watchdog der alles mit monitor trackt und informiert
  *    -> in jeweiligen instanzen tracken:
  *          -> worker müssten monitor auf clients haben und entsprechend reagieren??
- *
- * TODO: Testen ob alles den build übersteht, startet und dann Verhalten testen
- *
- * TODO: line 287 : check if break works or if we have to find another way??
  * TODO: line 346 : block client : dunno how atm*/
 
 
@@ -292,7 +288,7 @@ behavior client(stateful_actor<client_state>* self, caf::group grp) {
                 self->state.problems.clear();
                 self->state.usedCPUTime = 0;
                 self->state.usedWallTime = 0;
-                self->send(grp, block_false_atom_v);
+                //self->send(grp, block_false_atom_v);
             }
     };
 }
@@ -368,6 +364,9 @@ void run_worker(actor_system& sys, const config& cfg) {
     auto grp = *eg;
     // TODO: Spawn workers, e.g:
     // sys.spawn(worker, grp);
+    for (int i = 0; i < NUM_WORKER; i++) {
+        sys.spawn(worker, grp);
+    }
   } else {
     cerr << "error: " << caf::to_string(eg.error()) << '\n';
   }
