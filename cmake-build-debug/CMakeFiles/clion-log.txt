@@ -1,5 +1,5 @@
-/home/baal/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/212.5457.51/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_DEPENDS_USE_COMPILER=FALSE -G "CodeBlocks - Unix Makefiles" /home/baal/Dokumente/Repos/vslab-caf
--- The CXX compiler identification is GNU 11.1.0
+/opt/clion-2021.2.3/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_DEPENDS_USE_COMPILER=FALSE -G "CodeBlocks - Unix Makefiles" /home/tobi/VSP/vslab-caf
+-- The CXX compiler identification is GNU 9.3.0
 -- Detecting CXX compiler ABI info
 -- Detecting CXX compiler ABI info - done
 -- Check for working CXX compiler: /usr/bin/c++ - skipped
@@ -22,4 +22,4 @@
 -- Performing Test COMPILER_HAS_DEPRECATED_ATTR - Success
 -- Configuring done
 -- Generating done
--- Build files have been written to: /home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug
+-- Build files have been written to: /home/tobi/VSP/vslab-caf/cmake-build-debug

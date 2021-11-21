@@ -27,9 +27,11 @@ CAF_ADD_ATOM(vslab, done_msg_atom);
 CAF_ADD_ATOM(vslab, new_num_atom);
 CAF_ADD_ATOM(vslab, client_num_atom);
 CAF_ADD_ATOM(vslab, block_false_atom);
+CAF_ADD_ATOM(vslab, need_worker_atom);
 
 //WORKER TO CLIENT OVER GRP
 CAF_ADD_ATOM(vslab, result_atom);
 CAF_ADD_ATOM(vslab, give_number_atom);
+CAF_ADD_ATOM(vslab, worker_available_atom);
 
 CAF_END_TYPE_ID_BLOCK(vslab)

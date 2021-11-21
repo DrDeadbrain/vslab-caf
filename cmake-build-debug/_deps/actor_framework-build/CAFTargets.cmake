@@ -56,14 +56,14 @@ set_target_properties(CAF::internal PROPERTIES
 add_library(CAF::test INTERFACE IMPORTED)
 
 set_target_properties(CAF::test PROPERTIES
-  INTERFACE_INCLUDE_DIRECTORIES "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_test"
+  INTERFACE_INCLUDE_DIRECTORIES "/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_test"
 )
 
 # Create imported target CAF::core
 add_library(CAF::core SHARED IMPORTED)
 
 set_target_properties(CAF::core PROPERTIES
-  INTERFACE_INCLUDE_DIRECTORIES "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_core;/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_core"
+  INTERFACE_INCLUDE_DIRECTORIES "/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_core;/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_core"
   INTERFACE_LINK_LIBRARIES "Threads::Threads"
 )
 
@@ -71,21 +71,21 @@ set_target_properties(CAF::core PROPERTIES
 add_library(CAF::io SHARED IMPORTED)
 
 set_target_properties(CAF::io PROPERTIES
-  INTERFACE_INCLUDE_DIRECTORIES "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_io;/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_io"
+  INTERFACE_INCLUDE_DIRECTORIES "/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_io;/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_io"
   INTERFACE_LINK_LIBRARIES "CAF::core;\$<\$<CXX_COMPILER_ID:MSVC>:ws2_32>"
 )
 
 # Import target "CAF::core" for configuration "Debug"
 set_property(TARGET CAF::core APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
 set_target_properties(CAF::core PROPERTIES
-  IMPORTED_LOCATION_DEBUG "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_core/libcaf_core.so.0.18.0"
+  IMPORTED_LOCATION_DEBUG "/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_core/libcaf_core.so.0.18.0"
   IMPORTED_SONAME_DEBUG "libcaf_core.so.0.18.0"
   )
 
 # Import target "CAF::io" for configuration "Debug"
 set_property(TARGET CAF::io APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
 set_target_properties(CAF::io PROPERTIES
-  IMPORTED_LOCATION_DEBUG "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_io/libcaf_io.so.0.18.0"
+  IMPORTED_LOCATION_DEBUG "/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_io/libcaf_io.so.0.18.0"
   IMPORTED_SONAME_DEBUG "libcaf_io.so.0.18.0"
   )
 

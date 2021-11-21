@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = -Dlibcaf_io_EXPORTS
 
-CXX_INCLUDES = -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_io -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_io -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_core -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_core
+CXX_INCLUDES = -I/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_io -I/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_io -I/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_core -I/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_core
 
 CXX_FLAGS = -g -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -pthread -Wall -Wextra -pedantic -ftemplate-depth=512 -ftemplate-backtrace-limit=0 -Wno-missing-field-initializers -std=gnu++17
 

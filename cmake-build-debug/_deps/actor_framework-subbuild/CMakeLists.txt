@@ -12,17 +12,17 @@ project(actor_framework-populate NONE)
 # Pass through things we've already detected in the main project to avoid
 # paying the cost of redetecting them again in ExternalProject_Add()
 set(GIT_EXECUTABLE [==[/usr/bin/git]==])
-set(GIT_VERSION_STRING [==[2.34.0]==])
+set(GIT_VERSION_STRING [==[2.25.1]==])
 set_property(GLOBAL PROPERTY _CMAKE_FindGit_GIT_EXECUTABLE_VERSION
-  [==[/usr/bin/git;2.34.0]==]
+  [==[/usr/bin/git;2.25.1]==]
 )
 
 
 include(ExternalProject)
 ExternalProject_Add(actor_framework-populate
                      "UPDATE_DISCONNECTED" "False" "GIT_REPOSITORY" "https://github.com/actor-framework/actor-framework.git" "GIT_TAG" "1b29bf10"
-                    SOURCE_DIR          "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src"
-                    BINARY_DIR          "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build"
+                    SOURCE_DIR          "/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-src"
+                    BINARY_DIR          "/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-build"
                     CONFIGURE_COMMAND   ""
                     BUILD_COMMAND       ""
                     INSTALL_COMMAND     ""

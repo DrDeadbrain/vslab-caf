@@ -1,14 +1,14 @@
-if(NOT EXISTS "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/install_manifest.txt")
-  message(FATAL_ERROR "Cannot find install manifest: /home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/install_manifest.txt")
+if(NOT EXISTS "/home/tobi/VSP/vslab-caf/cmake-build-debug/install_manifest.txt")
+  message(FATAL_ERROR "Cannot find install manifest: /home/tobi/VSP/vslab-caf/cmake-build-debug/install_manifest.txt")
 endif()
 
-file(READ "/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/install_manifest.txt" files)
+file(READ "/home/tobi/VSP/vslab-caf/cmake-build-debug/install_manifest.txt" files)
 string(REGEX REPLACE "\n" ";" files "${files}")
 foreach(file ${files})
   message(STATUS "Uninstalling $ENV{DESTDIR}${file}")
   if(IS_SYMLINK "$ENV{DESTDIR}${file}" OR EXISTS "$ENV{DESTDIR}${file}")
     exec_program(
-      "/home/baal/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/212.5457.51/bin/cmake/linux/bin/cmake" ARGS "-E remove \"$ENV{DESTDIR}${file}\""
+      "/opt/clion-2021.2.3/bin/cmake/linux/bin/cmake" ARGS "-E remove \"$ENV{DESTDIR}${file}\""
       OUTPUT_VARIABLE rm_out
       RETURN_VALUE rm_retval
       )

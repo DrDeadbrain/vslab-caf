@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/baal/Dokumente/Repos/vslab-caf/. -I/home/baal/Dokumente/Repos/vslab-caf/include -I/home/baal/Dokumente/Repos/vslab-caf/third_party -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_core -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_core -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_io -I/home/baal/Dokumente/Repos/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_io
+CXX_INCLUDES = -I/home/tobi/VSP/vslab-caf/. -I/home/tobi/VSP/vslab-caf/include -I/home/tobi/VSP/vslab-caf/third_party -I/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_core -I/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_core -I/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-src/libcaf_io -I/home/tobi/VSP/vslab-caf/cmake-build-debug/_deps/actor_framework-build/libcaf_io
 
 CXX_FLAGS = -g -pthread -std=gnu++17
 
