@@ -29,7 +29,7 @@ CAF_POP_WARNINGS
 
 
 #define SERVER_IP "localhost"
-#define SERVER_PORT 5555
+#define SERVER_PORT 5000
 #define NUM_WORKER 4 //fix number of workers
 #define MODE "client" //"worker" //"server"
 
@@ -48,15 +48,6 @@ using namespace caf;
 
 /*TODO: MONITORING
  * 1. What to monitor?
- * ->if client dies
- *   -> inform all workers if they are working for that client
- *     -> worker müssen client id übergeben bekommen oder selber speichern dafür
- *     -> vielleicht andere/bessere option?
- * ->if worker dies ? keine ahnung ob das wichtig ist
- *      -> starten die sich selbst neu? wenn ja dann egal
- *         -> dann aber bei spawn in gruppe: nachricht um aufgabe zu erhalten ergänzen
- *      ->sonst neu starten???
- *         -> keine ahnung wie
  * -> if server dies
  *   -> inform clients and kill them?
  *   -> just kill everything directly?
@@ -64,12 +55,14 @@ using namespace caf;
  *    ->weitere instanz (wie server, client, worker) : Watchdog der alles mit monitor trackt und informiert
  *    -> in jeweiligen instanzen tracken:
  *          -> worker müssten monitor auf clients haben und entsprechend reagieren??
- * TODO: line 346 : block client : dunno how atm*/
+ * TODO: line 346 : block client : dunno how atm
+ * TODO: catch all messages in every actor because of errors
+ * */
 
 
 //big numbers inc
 int512_t Z1 = 8806715679; // 3 * 29 * 29 * 71 * 211 * 233
-int512_t Z2 = 0x826efbb5b4c665b9; // 9398726230209357241; // 443 * 503 * 997 * 1511 * 3541 * 7907
+int512_t Z2 = 9398726230209357241; // 443 * 503 * 997 * 1511 * 3541 * 7907 //0x826efbb5b4c665b9;
 //int512_t Z3 = 0xc72af6a83cc2d3984fedbe6c1d15e542556941e7;
 /*
 Z3 = 1137047281562824484226171575219374004320812483047 =
@@ -92,7 +85,7 @@ struct config : actor_system_config {
   string host = SERVER_IP;
   uint16_t port = SERVER_PORT;
   size_t num_workers = NUM_WORKER;
-  string mode = MODE;
+  string mode = "client";
   config() {
     opt_group{custom_options_, "global"}
       .add(host, "host,H", "server host (ignored in server mode)")
@@ -130,15 +123,30 @@ struct config : actor_system_config {
      return result;
  }
 
- int512_t pRho(int512_t N) {
+ struct rhoNumber {
+   int512_t number;
+   int iterationCount;
+ };
+
+ rhoNumber pRho(int512_t N) {
+     int iteration;
+     rhoNumber retNum;
      //init rnd seed
      std::mt19937 mt_rand(time(0));
 
      //no prime divisor for 1
-     if (N == 1) return N;
+     if (N == 1) {
+       retNum.iterationCount = 0;
+       retNum.number = N;
+       return retNum;
+     }
 
      //even number means one of the divisors is 2
-     if (N % 2 == 0) return int512_t(2);
+     if (N % 2 == 0) {
+       retNum.iterationCount = 0;
+       retNum.number = int512_t(2);
+       return retNum;
+     }
 
      //we will pick from range [2, N)
      int512_t x = (mt_rand() % (N-2)) + 2;
@@ -165,12 +173,17 @@ struct config : actor_system_config {
 
          /* check gcd of |x-y| and N */
          d = gcd(abs(x - y), N);
-
+         iteration++;
          /* retry if the algo fails to find prime factor with chosen x and c */
          if (d == N) return pRho(N);
      }
-     return d;
+     retNum.number = d;
+     retNum.iterationCount = iteration;
+     return retNum;
+
  }
+
+
 
 
 
@@ -189,6 +202,7 @@ struct client_state {
 
 
   //timings
+  int iterationCount;
 
   //begin of factorization
   clock_t begin;
@@ -213,25 +227,19 @@ behavior client(stateful_actor<client_state>* self, caf::group grp) {
     cout << "Enter number to factorize: " << endl;
     std::getline(std::cin, input);
     int512_t task = boost::lexical_cast<int512_t>(input);
-    //while even number
-    while (task % 2 == 2) {
-        cout << "ERROR: Even number provided" << endl
-             << "Insert number to factorize: " << endl << endl;
-        std::getline(std::cin, input);
-        task = boost::lexical_cast<int512_t>(input);
-    }
+
     if (task == -1) {
         task = Z1;
     }
     if (task == -2) {
         task = Z2;
     }
-    if (task == -3) {
+    /*if (task == -3) {
         task = Z1;
     }
     if (task == -4) {
         task = Z2;
-    }
+    }*/
     self->state.beginW = std::chrono::steady_clock::now();
     self->send(grp, init_num_atom_v, task);
 
@@ -251,19 +259,22 @@ behavior client(stateful_actor<client_state>* self, caf::group grp) {
                     }
                 }
             },
-            [=](result_atom, int512_t factor, int512_t problem, double time) {
+            [=](result_atom, int512_t factor, int512_t problem, double time, int iteration) {
                 int512_t currentProblem = problem;
                 self->state.usedCPUTime = self->state.usedCPUTime + time;
-
-
+                self->state.iterationCount = self->state.iterationCount + iteration;
+                cout << "WE DIED WHEN ACCESSING THE MAP" << endl;
                 if (self->state.problems.count(currentProblem) > 0) {
                     int512_t factorForProblems = self->state.problems.at(currentProblem);
                     if (factorForProblems == 0) {
                         self->state.problems.at(currentProblem) = factor;
                         currentProblem = currentProblem / factor;
-
+                        if(! self->state.problems.count(currentProblem)){
+                          self->state.problems.insert(std::pair <int512_t, int512_t> (currentProblem, 0));
+                        }
                         //check if done
                         if (is_probable_prime(currentProblem) || currentProblem == 2) {
+                            cout << "WE CAME TO IF probable prime" << endl;
                             self->send(grp, done_msg_atom_v, currentProblem);
                         } else {
                             self->send(grp, client_num_atom_v, currentProblem);
@@ -273,10 +284,14 @@ behavior client(stateful_actor<client_state>* self, caf::group grp) {
             },
             [=](done_msg_atom, int512_t number) {
                 //we are done
+                cout << "WE CAME INTO DONE_MSG" << endl;
                 self->state.endW = std::chrono::steady_clock::now();
+                cout << "self state problems at kills us" << endl;
                 self->state.problems.at(number) = number;
+                cout << "WE CAME TO END" << endl;
                 std::cout << "--------------------- Found Answer ---------------------" << endl << endl;
                 cout << "Found Factors: ";
+
                 for (auto elem: self->state.problems) {
                     cout << elem.second << " * ";
                 }
@@ -284,12 +299,17 @@ behavior client(stateful_actor<client_state>* self, caf::group grp) {
                         self->state.endW - self->state.beginW).count();
                 cout << endl << "CPU time used: " << (self->state.usedCPUTime / 1000000000) << " s" << endl;
                 cout << "Wall clock time used: " << (self->state.usedWallTime / 1000000000) << " s" << endl;
+                cout << "Iterations: " << (self->state.iterationCount) << endl;
                 cout << endl << "------------------ ------------------ ------------------" << endl << endl;
                 self->state.problems.clear();
                 self->state.usedCPUTime = 0;
                 self->state.usedWallTime = 0;
                 //self->send(grp, block_false_atom_v);
-            }
+            },
+            //catch all other messages to prevent error that kills actor
+            [=](worker_quit_atom) {cout << "worker_qut_atom msg Who?->Client " << endl;},
+            [=](new_num_atom, int512_t N) {cout << "new_num_atom msg Who?->Client " << endl;},
+            [=](client_num_atom, int512_t N) {cout << "client_num_atom msg Who?->Client " << endl;}
     };
 }
 
@@ -312,6 +332,8 @@ struct worker_state {
 
   //blocked by a client
   bool blocked;
+
+  rhoNumber rhoNum;
 };
 
 behavior worker(stateful_actor<worker_state>* self, caf::group grp) {
@@ -320,24 +342,38 @@ behavior worker(stateful_actor<worker_state>* self, caf::group grp) {
   self->state.grp = grp;
 
   return {
+      [=](worker_quit_atom) {
+          //clear mailbox
+
+      },
       [=](new_num_atom, int512_t N) {
           //check if worker is blocked by other client
-          if (self->state.blocked == true) {
+          /*if (self->state.blocked == true) {
               //TODO: block client , dunno how atm message can be kinda odd because every client gets it
           }
           //block worker for new clients
           self->state.blocked = true;
-
+          */
           std::clock_t c_start = std::clock();
           auto t_start = std::chrono::steady_clock::now();
 
-          int512_t fac = pRho(N);
+          if (!(self->mailbox().empty())) {
+            cout << "worker got new task, cancel current calc" << endl;
+            return;
+          }
+
+          self->state.rhoNum = pRho(N);
+
+          if (!(self->mailbox().empty())) {
+            cout << "worker got new task, cancel current calc" << endl;
+            return;
+          }
 
           std::clock_t c_end = std::clock();
           auto t_end = std::chrono::steady_clock::now();
           double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
-          self->send(grp, result_atom_v, fac, N, cpu_time_used);
+          self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
 
       },
       [=](client_num_atom, int512_t N) {
@@ -345,17 +381,25 @@ behavior worker(stateful_actor<worker_state>* self, caf::group grp) {
           auto t_start = std::chrono::steady_clock::now();
 
 
-          int512_t fac = pRho(N);
+          self->state.rhoNum = pRho(N);
+
+          if(!(self->mailbox().empty())) {
+            cout << "new task, cancel current calc" << endl;
+            return;
+          }
+
 
           std::clock_t c_end = std::clock();
           auto t_end = std::chrono::steady_clock::now();
           double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
-          self->send(grp, result_atom_v, fac, N, cpu_time_used);
+          self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
       },
-      [=](block_false_atom) {
-          self->state.blocked = false;
-      }
+      //catch all messages to counter error that kills actor
+      [=](init_num_atom, int512_t task) {cout << "init_num_atom msg Who?->Worker " << endl;},
+      [=](result_atom, int512_t factor, int512_t problem, double time, int iteration){cout << "result_atom msg Who?->Worker " << endl;},
+      [=](done_msg_atom, int512_t number) {cout << "done_msg_atom msg Who?->Worker " << endl;}
+
   };
 }
 

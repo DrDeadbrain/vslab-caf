@@ -32,4 +32,7 @@ CAF_ADD_ATOM(vslab, block_false_atom);
 CAF_ADD_ATOM(vslab, result_atom);
 CAF_ADD_ATOM(vslab, give_number_atom);
 
+//WORKER TO WORKER OVER GRP IF CLIENT DOWN
+CAF_ADD_ATOM(vslab, worker_quit_atom);
+
 CAF_END_TYPE_ID_BLOCK(vslab)
