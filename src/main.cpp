@@ -43,6 +43,9 @@ using std::vector;
 
 using boost::multiprecision::gcd;
 using boost::multiprecision::int512_t;
+using boost::multiprecision::uint512_t;
+using boost::multiprecision::int1024_t;
+using boost::multiprecision::uint1024_t;
 
 using namespace caf;
 
@@ -59,22 +62,23 @@ using namespace caf;
  * TODO: catch all messages in every actor because of errors
  * */
 
-
+static int numPRho = 0;
+int512_t eCode = -99;
 //big numbers inc
 int512_t Z1 = 8806715679; // 3 * 29 * 29 * 71 * 211 * 233
 int512_t Z2 = 9398726230209357241; // 443 * 503 * 997 * 1511 * 3541 * 7907 //0x826efbb5b4c665b9;
 //int512_t Z3 = 0xc72af6a83cc2d3984fedbe6c1d15e542556941e7;
-/*
-Z3 = 1137047281562824484226171575219374004320812483047 =
-7907 * 12391 * 12553 * 156007 * 191913031 * 4302407713 * 7177162612387
-*/
+
+//uint1024_t Z3 = 1137047281562824484226171575219374004320812483047;
+/*7907 * 12391 * 12553 * 156007 * 191913031 * 4302407713 * 7177162612387*/
+
 //int512_t Z4 = 0x1aa0d675bd49341ccc03fff7170f29cd7048bf40430c22ced5a391d015d19677bde78a7b95b5d59b6b26678238fa7;
-/*
-Z4 = 1000602106143806596478722974273666950903906112131794745457338659266842446985022076792112309173975243506969710503
-   =
+
+//Z4 = 1000602106143806596478722974273666950903906112131794745457338659266842446985022076792112309173975243506969710503;
+ /*  =
    10657 * 11657 * 13264529 * 10052678938039 * 2305843009213693951 *
-   (26196077648981785233796902948145280025374347621094198197324282087) =
-*/
+   (26196077648981785233796902948145280025374347621094198197324282087) =*/
+
 
 
 
@@ -99,89 +103,122 @@ struct config : actor_system_config {
  * Pollard rho helpers
  * and pollard func itself
  */
- int512_t gcd(int512_t u, int512_t v) {
-     while (v != 0) {
-         int512_t r = u % v;
-         u = v;
-         v = r;
-     }
-     return u;
- }
+int512_t gcd(int512_t u, int512_t v) {
+  while (v != 0) {
+    int512_t r = u % v;
+    u = v;
+    v = r;
+  }
+  return u;
+}
 
- int512_t modular_pow(int512_t base, int512_t exponent, int512_t modulus) {
-     /*init result*/
-     int512_t result = 1;
+int512_t modular_pow(int512_t base, int512_t exponent, int512_t modulus) {
+  /*init result*/
+  int512_t result = 1;
 
-     while (exponent > 0) {
-         //if y is odd, multiply base with result
-         if (exponent & 1)
-             result = (result * base) % modulus;
-         exponent = exponent >> 1;
-         //base = base * base
-         base = (base * base) % modulus;
-     }
-     return result;
- }
+  while (exponent > 0) {
+    //if y is odd, multiply base with result
+    if (exponent & 1)
+      result = (result * base) % modulus;
+    exponent = exponent >> 1;
+    //base = base * base
+    base = (base * base) % modulus;
+  }
+  return result;
+}
 
- struct rhoNumber {
-   int512_t number;
-   int iterationCount;
- };
+struct rhoNumber {
+  int512_t number;
+  int iterationCount;
+  int512_t p;
+};
 
- rhoNumber pRho(int512_t N) {
-     int iteration;
-     rhoNumber retNum;
-     //init rnd seed
-     std::mt19937 mt_rand(time(0));
+rhoNumber pRho(int512_t N) {
+  int iteration;
+  struct rhoNumber retNum;
+  // init rnd seed
+  std::mt19937 mt_rand(time(0));
 
-     //no prime divisor for 1
-     if (N == 1) {
-       retNum.iterationCount = 0;
-       retNum.number = N;
-       return retNum;
-     }
+  // no prime divisor for 1
+  if (N == 1) {
+    retNum.iterationCount = 0;
+    retNum.number = int512_t(1);
+    return retNum;
+  }
 
-     //even number means one of the divisors is 2
-     if (N % 2 == 0) {
-       retNum.iterationCount = 0;
-       retNum.number = int512_t(2);
-       return retNum;
-     }
+  // even number means one of the divisors is 2
+  if (N % 2 == 0) {
+    retNum.iterationCount = 0;
+    retNum.number = int512_t(2);
+    return retNum;
+  }
 
-     //we will pick from range [2, N)
-     int512_t x = (mt_rand() % (N-2)) + 2;
-     int512_t y = x;
+  // we will pick from range [1, N)
+  int512_t x = (mt_rand() % N + 1);
+  int512_t y = x;
 
-     /*
+  /*
       * the constant in f(x)
       * algorithm can be re-run with a different c
       * if it throws failure for a composite
       **/
-     int512_t c = (mt_rand() % (N-1)) + 1;
+  int512_t c = (mt_rand() % (N - 1)) + 1;
 
-     //init candidate divisor (or result)
-     int512_t d = int512_t(1);
+  // init difference
+  int512_t d = int512_t(0);
 
-     //until prime factor isn't obtained|| if n is prime, return n
-     while (d == int512_t(1)) {
-         /* Tortoise move: x(i+1) = f(x(i)) */
-         x = (modular_pow(x, int512_t(2), N) + c + N) % N;
+  // init candidate divisor (or result)
+  int512_t p = 1;
 
-         /* Hare move: y(i+1) = f(f(y(i))) */
-         y = (modular_pow(y, int512_t(2), N) + c + N) % N;
-         y = (modular_pow(y, int512_t(2), N) + c + N) % N;
+  /**
+   * until prime factor isn't obtained
+   */
+  int numberOfRuns = 0;
+  int512_t M = (int512_t) sqrt(sqrt(N));
+  M = (int512_t) (M * 118);
+  M = (int512_t) (M / 100);
 
-         /* check gcd of |x-y| and N */
-         d = gcd(abs(x - y), N);
-         iteration++;
-         /* retry if the algo fails to find prime factor with chosen x and c */
-         if (d == N) return pRho(N);
-     }
-     retNum.number = d;
-     retNum.iterationCount = iteration;
-     return retNum;
+  do {
+    // if running longer than Middle M 1.18 * sqrt(sqrt(N)): try with new random number
+    if (numberOfRuns > M) {
+      cerr << "Pollard is running longer than Middle M 1.18 * sqrt(sqrt(N)):"
+           << endl;
+      return pRho(N);
+    }
+    /* Tortoise move: x(i+1) = f(x(i)) */
+    x = (x * x + c) % N;
 
- }
+    /* Hare Move: y(i+1) = f(f(y(i))) */
+    y = (y * y + c) % N;
+    y = (y * y + c) % N;
+
+    /* Difference between (y - x) % N */
+    d = (y - x) % N;
+
+    /* Check GCD of |x-y| and N */
+    p = gcd(d, N);
+
+    /* make divisor positive */
+    if (p < 0) {
+      p *= -1;
+    }
+    numberOfRuns++;
+    numPRho++;
+  } while (p == 1);
+
+  /* retry if algo fails to find prime number with chosen x and c */
+  if (p != N) {
+    struct rhoNumber retNum;
+    retNum.number = p;
+    retNum.iterationCount = numPRho;
+    numPRho = 0;
+    retNum.p = p;
+    return retNum;
+  } else {
+    retNum.p = eCode;
+    return retNum;
+  }
+}
 
 
 
@@ -219,98 +256,95 @@ struct client_state {
 };
 
 behavior client(stateful_actor<client_state>* self, caf::group grp) {
-    // Join group and save it to send messages later.
-    self->join(grp);
-    self->state.grp = grp;
+  // Join group and save it to send messages later.
+  self->join(grp);
+  self->state.grp = grp;
 
-    string input;
-    cout << "Enter number to factorize: " << endl;
-    std::getline(std::cin, input);
-    int512_t task = boost::lexical_cast<int512_t>(input);
+  string input;
+  cout << "Enter number to factorize: " << endl;
+  std::getline(std::cin, input);
+  int512_t task = boost::lexical_cast<int512_t>(input);
 
-    if (task == -1) {
-        task = Z1;
-    }
-    if (task == -2) {
-        task = Z2;
-    }
-    /*if (task == -3) {
-        task = Z1;
-    }
-    if (task == -4) {
-        task = Z2;
-    }*/
-    self->state.beginW = std::chrono::steady_clock::now();
-    self->send(grp, init_num_atom_v, task);
+  if (task == -1) {
+    task = Z1;
+  }
+  if (task == -2) {
+    task = Z2;
+  }
+  /*
+  if (task == -3) {
+      task = Z3;
+  }
+
+  if (task == -4) {
+      task = Z2;
+  }*/
+  self->state.beginW = std::chrono::steady_clock::now();
+  self->send(grp, init_num_atom_v, task);
 
 
-    return {
-            //new job from user
-            [=](init_num_atom, int512_t task) {
-                //haven't gotten job yet
-                if (!self->state.problems.count(task)) {
-                    self->state.problems.insert(std::pair<int512_t, int512_t>(task, 0));
+  return {
+    //new job from user
+    [=](init_num_atom, int512_t task) {
+      //haven't gotten job yet
+      if (!self->state.problems.count(task)) {
+        self->state.problems.insert(std::pair<int512_t, int512_t>(task, 0));
 
-                    //check if number is prime or 2
-                    if (is_probable_prime(task) || task == 2) {
-                        self->send(grp, done_msg_atom_v, task);
-                    } else {
-                        self->send(grp, new_num_atom_v, task);
-                    }
-                }
-            },
-            [=](result_atom, int512_t factor, int512_t problem, double time, int iteration) {
-                int512_t currentProblem = problem;
-                self->state.usedCPUTime = self->state.usedCPUTime + time;
-                self->state.iterationCount = self->state.iterationCount + iteration;
-                cout << "WE DIED WHEN ACCESSING THE MAP" << endl;
-                if (self->state.problems.count(currentProblem) > 0) {
-                    int512_t factorForProblems = self->state.problems.at(currentProblem);
-                    if (factorForProblems == 0) {
-                        self->state.problems.at(currentProblem) = factor;
-                        currentProblem = currentProblem / factor;
-                        if(! self->state.problems.count(currentProblem)){
-                          self->state.problems.insert(std::pair <int512_t, int512_t> (currentProblem, 0));
-                        }
-                        //check if done
-                        if (is_probable_prime(currentProblem) || currentProblem == 2) {
-                            cout << "WE CAME TO IF probable prime" << endl;
-                            self->send(grp, done_msg_atom_v, currentProblem);
-                        } else {
-                            self->send(grp, client_num_atom_v, currentProblem);
-                        }
-                    }
-                }
-            },
-            [=](done_msg_atom, int512_t number) {
-                //we are done
-                cout << "WE CAME INTO DONE_MSG" << endl;
-                self->state.endW = std::chrono::steady_clock::now();
-                cout << "self state problems at kills us" << endl;
-                self->state.problems.at(number) = number;
-                cout << "WE CAME TO END" << endl;
-                std::cout << "--------------------- Found Answer ---------------------" << endl << endl;
-                cout << "Found Factors: ";
+        //check if number is prime or 2
+        if (is_probable_prime(task) || task == 2) {
+          self->send(grp, done_msg_atom_v, task);
+        } else {
+          self->send(grp, new_num_atom_v, task);
+        }
+      }
+    },
+    [=](result_atom, int512_t factor, int512_t problem, double time, int iteration) {
+      int512_t currentProblem = problem;
+      self->state.usedCPUTime = self->state.usedCPUTime + time;
+      self->state.iterationCount = self->state.iterationCount + iteration;
 
-                for (auto elem: self->state.problems) {
-                    cout << elem.second << " * ";
-                }
-                self->state.usedWallTime = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                        self->state.endW - self->state.beginW).count();
-                cout << endl << "CPU time used: " << (self->state.usedCPUTime / 1000000000) << " s" << endl;
-                cout << "Wall clock time used: " << (self->state.usedWallTime / 1000000000) << " s" << endl;
-                cout << "Iterations: " << (self->state.iterationCount) << endl;
-                cout << endl << "------------------ ------------------ ------------------" << endl << endl;
-                self->state.problems.clear();
-                self->state.usedCPUTime = 0;
-                self->state.usedWallTime = 0;
-                //self->send(grp, block_false_atom_v);
-            },
-            //catch all other messages to prevent error that kills actor
-            [=](worker_quit_atom) {cout << "worker_qut_atom msg Who?->Client " << endl;},
-            [=](new_num_atom, int512_t N) {cout << "new_num_atom msg Who?->Client " << endl;},
-            [=](client_num_atom, int512_t N) {cout << "client_num_atom msg Who?->Client " << endl;}
-    };
+      if (self->state.problems.count(currentProblem) > 0) {
+        int512_t factorForProblems = self->state.problems.at(currentProblem);
+        if (factorForProblems == 0) {
+          self->state.problems.at(currentProblem) = factor;
+          currentProblem = currentProblem / factor;
+          if(! self->state.problems.count(currentProblem)){
+            self->state.problems.insert(std::pair <int512_t, int512_t> (currentProblem, 0));
+          }
+          //check if done
+          if (is_probable_prime(currentProblem) || currentProblem == 2) {
+            self->send(grp, done_msg_atom_v, currentProblem);
+          } else {
+            self->send(grp, client_num_atom_v, currentProblem);
+          }
+        }
+      }
+    },
+    [=](done_msg_atom, int512_t number) {
+      //we are done
+      self->state.endW = std::chrono::steady_clock::now();
+      self->state.problems.at(number) = number;
+      std::cout << "--------------------- Found Answer ---------------------" << endl << endl;
+      cout << "Found Factors: ";
+
+      for (auto elem: self->state.problems) {
+        cout << elem.second << " * ";
+      }
+      self->state.usedWallTime = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                   self->state.endW - self->state.beginW).count();
+      cout << endl << "CPU time used: " << (self->state.usedCPUTime / 1000000000) << " s" << endl;
+      cout << "Wall clock time used: " << (self->state.usedWallTime / 1000000000) << " s" << endl;
+      cout << "Iterations: " << (self->state.iterationCount) << endl;
+      cout << endl << "------------------ ------------------ ------------------" << endl << endl;
+      self->state.problems.clear();
+      self->state.usedCPUTime = 0;
+      self->state.usedWallTime = 0;
+      //self->send(grp, block_false_atom_v);
+    },
+    //catch all other messages to prevent error that kills actor
+    [=](new_num_atom, int512_t N) {},
+    [=](client_num_atom, int512_t N) {}
+  };
 }
 
 void run_client(actor_system& sys, const config& cfg) {
@@ -342,63 +376,76 @@ behavior worker(stateful_actor<worker_state>* self, caf::group grp) {
   self->state.grp = grp;
 
   return {
-      [=](worker_quit_atom) {
-          //clear mailbox
+    [=](new_num_atom, int512_t N) {
+      //TODO:block if other client : Clientid speichern und abfragen, wenn bearbeitung done -> clientID = 0 lokal
 
-      },
-      [=](new_num_atom, int512_t N) {
-          //check if worker is blocked by other client
-          /*if (self->state.blocked == true) {
-              //TODO: block client , dunno how atm message can be kinda odd because every client gets it
-          }
-          //block worker for new clients
-          self->state.blocked = true;
-          */
-          std::clock_t c_start = std::clock();
-          auto t_start = std::chrono::steady_clock::now();
+      std::clock_t c_start = std::clock();
+      auto t_start = std::chrono::steady_clock::now();
 
-          if (!(self->mailbox().empty())) {
-            cout << "worker got new task, cancel current calc" << endl;
-            return;
-          }
+      if(!(self->mailbox().empty())) {
+        cout << "Worker got new Task, cancel current calc" << endl;
+        return;
+      }
 
-          self->state.rhoNum = pRho(N);
+      self->state.rhoNum = pRho(N);
 
-          if (!(self->mailbox().empty())) {
-            cout << "worker got new task, cancel current calc" << endl;
-            return;
-          }
+      if(!(self->mailbox().empty())) {
+        cout << "Worker got new Task, cancel current calc" << endl;
+        return;
+      }
 
+      while(self->state.rhoNum.p == eCode) {
+
+        if(is_probable_prime(self->state.rhoNum.number)) {
           std::clock_t c_end = std::clock();
           auto t_end = std::chrono::steady_clock::now();
           double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
           self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
+        }
+        self->state.rhoNum = pRho(self->state.rhoNum.number);
 
-      },
-      [=](client_num_atom, int512_t N) {
-          std::clock_t c_start = std::clock();
-          auto t_start = std::chrono::steady_clock::now();
+        if(!(self->mailbox().empty())) {
+          cout << "Worker got new Task, cancel current calc" << endl;
+          return;
+        }
+      }
+      std::clock_t c_end = std::clock();
+      auto t_end = std::chrono::steady_clock::now();
+      double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
+
+      self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
+
+    },
+    [=](client_num_atom, int512_t N) {
+
+      std::clock_t c_start = std::clock();
+      auto t_start = std::chrono::steady_clock::now();
+
+      self->state.rhoNum = pRho(N);
 
 
-          self->state.rhoNum = pRho(N);
 
-          if(!(self->mailbox().empty())) {
-            cout << "new task, cancel current calc" << endl;
-            return;
-          }
-
-
+      if(self->state.rhoNum.p == eCode) {
+        if(is_probable_prime(self->state.rhoNum.number)) {
           std::clock_t c_end = std::clock();
           auto t_end = std::chrono::steady_clock::now();
           double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
           self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
-      },
-      //catch all messages to counter error that kills actor
-      [=](init_num_atom, int512_t task) {cout << "init_num_atom msg Who?->Worker " << endl;},
-      [=](result_atom, int512_t factor, int512_t problem, double time, int iteration){cout << "result_atom msg Who?->Worker " << endl;},
-      [=](done_msg_atom, int512_t number) {cout << "done_msg_atom msg Who?->Worker " << endl;}
+        }
+        self->state.rhoNum = pRho(self->state.rhoNum.number);
+      }
+      std::clock_t c_end = std::clock();
+      auto t_end = std::chrono::steady_clock::now();
+      double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
+
+      self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
+    },
+    //catch all messages to counter error that kills actor
+    [=](init_num_atom, int512_t task) {},
+    [=](result_atom, int512_t factor, int512_t problem, double time, int iteration){},
+    [=](done_msg_atom, int512_t number) {}
 
   };
 }
@@ -409,7 +456,7 @@ void run_worker(actor_system& sys, const config& cfg) {
     // TODO: Spawn workers, e.g:
     // sys.spawn(worker, grp);
     for (int i = 0; i < NUM_WORKER; i++) {
-        sys.spawn(worker, grp);
+      sys.spawn(worker, grp);
     }
   } else {
     cerr << "error: " << caf::to_string(eg.error()) << '\n';
@@ -420,12 +467,12 @@ void run_worker(actor_system& sys, const config& cfg) {
 // -- SERVER -------------------------------------------------------------------
 
 void run_server(actor_system& sys, const config& cfg) {
-    if (auto port = sys.middleman().publish_local_groups(cfg.port))
-        cout << "published local groups at port " << *port << '\n';
-    else
-        cerr << "error: " << caf::to_string(port.error()) << '\n';
-    cout << "press any key to exit" << std::endl;
-    getc(stdin);
+  if (auto port = sys.middleman().publish_local_groups(cfg.port))
+    cout << "published local groups at port " << *port << '\n';
+  else
+    cerr << "error: " << caf::to_string(port.error()) << '\n';
+  cout << "press any key to exit" << std::endl;
+  getc(stdin);
 }
 
 // -- MAIN ---------------------------------------------------------------------
@@ -444,7 +491,7 @@ void caf_main(actor_system& sys, const config& cfg) {
     (i->second)(sys, cfg);
   else
     cerr << "*** invalid mode specified" << endl;
-  }
+}
 }
 
  // namespace
