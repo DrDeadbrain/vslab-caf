@@ -341,6 +341,11 @@ behavior client(stateful_actor<client_state>* self, caf::group grp) {
       self->state.usedWallTime = 0;
       //self->send(grp, block_false_atom_v);
     },
+    [=](const group_down_msg&){
+      std::cerr << "FATAL: server is down.\n Press ENTER to exit.\n";
+      fclose(stdin);
+      self->quit();
+    },
     //catch all other messages to prevent error that kills actor
     [=](new_num_atom, int512_t N) {},
     [=](client_num_atom, int512_t N) {}
@@ -441,6 +446,10 @@ behavior worker(stateful_actor<worker_state>* self, caf::group grp) {
       double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
       self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
+    },
+    [=](const group_down_msg&){
+      std::cerr << "FATAL: server is down!\nPress ENTER to exit.\n";
+      self->quit();
     },
     //catch all messages to counter error that kills actor
     [=](init_num_atom, int512_t task) {},
