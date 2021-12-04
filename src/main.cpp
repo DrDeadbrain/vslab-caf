@@ -31,7 +31,7 @@ CAF_PUSH_WARNINGS
 #define SERVER_IP "localhost"
 #define SERVER_PORT 5000
 #define NUM_WORKER 4 //fix number of workers
-#define MODE "client" //"worker" //"server"
+#define MODE "client" //"worker" //"server" //"client"
 
 
 using std::cerr;
@@ -89,7 +89,7 @@ namespace {
         string host = SERVER_IP;
         uint16_t port = SERVER_PORT;
         size_t num_workers = NUM_WORKER;
-        string mode = "client";
+        string mode = MODE;
         config() {
             opt_group{custom_options_, "global"}
                     .add(host, "host,H", "server host (ignored in server mode)")
@@ -252,7 +252,6 @@ namespace {
         //end of factorization
         std::chrono::steady_clock::time_point endW;
         double usedWallTime;
-
     };
 
     behavior client(stateful_actor<client_state>* self, caf::group grp) {
@@ -298,6 +297,7 @@ namespace {
                         }
                     }
                 },
+          
                 [=](result_atom, int512_t factor, int512_t problem, double time, int iteration) {
                     int512_t currentProblem = problem;
                     self->state.usedCPUTime = self->state.usedCPUTime + time;
@@ -320,6 +320,7 @@ namespace {
                         }
                     }
                 },
+
                 [=](done_msg_atom, int512_t number) {
                     //we are done
                     self->state.endW = std::chrono::steady_clock::now();
@@ -341,11 +342,13 @@ namespace {
                     self->state.usedWallTime = 0;
                     //self->send(grp, block_false_atom_v);
                 },
+
                 [=](const group_down_msg&){
                     std::cerr << "FATAL: server is down.\n Press ENTER to exit.\n";
                     fclose(stdin);
                     self->quit();
                 },
+
                 //catch all other messages to prevent error that kills actor
                 [=](new_num_atom, int512_t N, caf::actor_addr address) {},
                 [=](client_num_atom, int512_t N) {}
@@ -381,6 +384,7 @@ namespace {
         // Join group and save it to send messages later.
         self->join(grp);
         self->state.grp = grp;
+        self->state.blocked = false;
         self->state.address = nullptr;
 
         return {
@@ -388,14 +392,14 @@ namespace {
                     //TODO:block if other client : Clientid speichern und abfragen, wenn bearbeitung done -> clientID = 0 lokal
 
                     if(((self->state.address != address) and (self->state.blocked == false)) ||
-                       ((self->state.address == address) and (self->state.blocked == false))) {
+                       ((self->state.address == address))) {
 
                         self->state.address = address;
                         self->state.blocked = true;
 
-                        cout << "\nNEW_NUM SUCCESSFUL" << std::endl;
-                        cout << to_string(self->state.address) + " registered as current client" << std::endl;
-                        cout << "blocked: " + self->state.blocked << std::endl;
+                        cout << "\nNEW_NUM SUCCESSFUL" << endl;
+                        cout << to_string(self->state.address) + " registered as current client" << endl;
+                        cout << "Blocked: " << self->state.blocked << endl;
 
 
                         std::clock_t c_start = std::clock();
@@ -436,12 +440,12 @@ namespace {
                         self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
                     }
                     else {
-                        cout << "\nNEW_NUM FAILED" << std::endl;
-                        cout << to_string(address) + "is blocked by " + to_string(self->state.address) << std::endl;
-                        cout << "blocked: " + self->state.blocked << std::endl;
+                        cout << "\nNEW_NUM FAILED" << endl;
+                        cout << to_string(address) << " is blocked by " << to_string(self->state.address) << endl;
+                        cout << "Blocked: " << self->state.blocked << endl;
                     }
-
                 },
+
                 [=](client_num_atom, int512_t N) {
 
                     std::clock_t c_start = std::clock();
@@ -474,13 +478,14 @@ namespace {
                 //catch all messages to counter error that kills actor
                 [=](init_num_atom, int512_t task) {},
                 [=](result_atom, int512_t factor, int512_t problem, double time, int iteration){},
+
                 [=](done_msg_atom, int512_t number) {
                     //unblock if done
                     self->state.blocked = false;
 
-                    cout << "\nDONE_MSG" << std::endl;
-                    cout << to_string(self->state.address);
-                    cout << "blocked: " + self->state.blocked << std::endl;
+                    cout << "\nDONE_MSG" << endl;
+                    cout << to_string(self->state.address) << " is done." << endl;
+                    cout << "Blocked: " << self->state.blocked << endl;
                 }
         };
     }
