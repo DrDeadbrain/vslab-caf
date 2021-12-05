@@ -270,17 +270,17 @@ namespace {
         if (task == -2) {
             task = Z2;
         }
-        /*
+/*
         if (task == -3) {
             task = Z3;
         }
 
         if (task == -4) {
             task = Z2;
-        }*/
+        }
+*/
         self->state.beginW = std::chrono::steady_clock::now();
         self->send(grp, init_num_atom_v, task);
-
 
         return {
                 //new job from user
@@ -297,7 +297,7 @@ namespace {
                         }
                     }
                 },
-          
+
                 [=](result_atom, int512_t factor, int512_t problem, double time, int iteration) {
                     int512_t currentProblem = problem;
                     self->state.usedCPUTime = self->state.usedCPUTime + time;
@@ -340,7 +340,7 @@ namespace {
                     self->state.problems.clear();
                     self->state.usedCPUTime = 0;
                     self->state.usedWallTime = 0;
-                    //self->send(grp, block_false_atom_v);
+                    self->send(grp, block_false_atom_v, self->address());
                 },
 
                 [=](const group_down_msg&){
@@ -351,7 +351,8 @@ namespace {
 
                 //catch all other messages to prevent error that kills actor
                 [=](new_num_atom, int512_t N, caf::actor_addr address) {},
-                [=](client_num_atom, int512_t N) {}
+                [=](client_num_atom, int512_t N) {},
+                [=](block_false_atom, caf::actor_addr address) {}
         };
     }
 
@@ -391,56 +392,61 @@ namespace {
                 [=](new_num_atom, int512_t N, caf::actor_addr address) {
                     //TODO:block if other client : Clientid speichern und abfragen, wenn bearbeitung done -> clientID = 0 lokal
 
-                    if(((self->state.address != address) and (self->state.blocked == false)) ||
-                       ((self->state.address == address))) {
+                    if((self->state.blocked == false) || ((self->state.blocked == true) and (self->state.address == address))) {
 
+                      cout << "\nNEW_NUM SUCCESSFUL " << to_string(self->state.address) << endl;
+
+                      //set new current client address
+                      if(self->state.address != address) {
                         self->state.address = address;
+                        cout << to_string(self->state.address) << " registered as current client" << endl;
+                      }
+                      //block for other clients if unblocked
+                      if(self->state.blocked == false) {
                         self->state.blocked = true;
-
-                        cout << "\nNEW_NUM SUCCESSFUL" << endl;
-                        cout << to_string(self->state.address) + " registered as current client" << endl;
                         cout << "Blocked: " << self->state.blocked << endl;
+                      }
 
+                      std::clock_t c_start = std::clock();
+                      auto t_start = std::chrono::steady_clock::now();
 
-                        std::clock_t c_start = std::clock();
-                        auto t_start = std::chrono::steady_clock::now();
+                      if(!(self->mailbox().empty())) {
+                        cout << "Worker got new Task, cancel current calc" << endl;
+                        return;
+                      }
+
+                      self->state.rhoNum = pRho(N);
+
+                      if(!(self->mailbox().empty())) {
+                        cout << "Worker got new Task, cancel current calc" << endl;
+                        return;
+                      }
+
+                      while(self->state.rhoNum.p == eCode) {
+
+                        if(is_probable_prime(self->state.rhoNum.number)) {
+                          std::clock_t c_end = std::clock();
+                          auto t_end = std::chrono::steady_clock::now();
+                          double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
+
+                          self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
+                        }
+                        self->state.rhoNum = pRho(self->state.rhoNum.number);
 
                         if(!(self->mailbox().empty())) {
-                            cout << "Worker got new Task, cancel current calc" << endl;
-                            return;
+                          cout << "Worker got new Task, cancel current calc" << endl;
+                          return;
                         }
+                      }
+                      std::clock_t c_end = std::clock();
+                      auto t_end = std::chrono::steady_clock::now();
+                      double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
-                        self->state.rhoNum = pRho(N);
-
-                        if(!(self->mailbox().empty())) {
-                            cout << "Worker got new Task, cancel current calc" << endl;
-                            return;
-                        }
-
-                        while(self->state.rhoNum.p == eCode) {
-
-                            if(is_probable_prime(self->state.rhoNum.number)) {
-                                std::clock_t c_end = std::clock();
-                                auto t_end = std::chrono::steady_clock::now();
-                                double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
-
-                                self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
-                            }
-                            self->state.rhoNum = pRho(self->state.rhoNum.number);
-
-                            if(!(self->mailbox().empty())) {
-                                cout << "Worker got new Task, cancel current calc" << endl;
-                                return;
-                            }
-                        }
-                        std::clock_t c_end = std::clock();
-                        auto t_end = std::chrono::steady_clock::now();
-                        double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
-
-                        self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
+                      self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
                     }
+                    //if blocked by another client
                     else {
-                        cout << "\nNEW_NUM FAILED" << endl;
+                        cout << "\nNEW_NUM FAILED " << to_string(address) << endl;
                         cout << to_string(address) << " is blocked by " << to_string(self->state.address) << endl;
                         cout << "Blocked: " << self->state.blocked << endl;
                     }
@@ -479,13 +485,17 @@ namespace {
                 [=](init_num_atom, int512_t task) {},
                 [=](result_atom, int512_t factor, int512_t problem, double time, int iteration){},
 
-                [=](done_msg_atom, int512_t number) {
-                    //unblock if done
-                    self->state.blocked = false;
+                [=](done_msg_atom, int512_t number) {},
 
-                    cout << "\nDONE_MSG" << endl;
-                    cout << to_string(self->state.address) << " is done." << endl;
-                    cout << "Blocked: " << self->state.blocked << endl;
+                [=](block_false_atom, caf::actor_addr address) {
+                    //unblock if done
+                    if((self->state.address == address) and (self->state.blocked == true)) {
+                        self->state.blocked = false;
+
+                        cout << "\nDONE_MSG" << endl;
+                        cout << to_string(self->state.address) << " is done." << endl;
+                        cout << "Blocked: " << self->state.blocked << endl;
+                    }
                 }
         };
     }
