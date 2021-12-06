@@ -280,67 +280,73 @@ namespace {
         }
 */
         self->state.beginW = std::chrono::steady_clock::now();
-        self->send(grp, init_num_atom_v, task);
+        self->send(grp, init_num_atom_v, task, self->address());
 
         return {
                 //new job from user
-                [=](init_num_atom, int512_t task) {
-                    //haven't gotten job yet
-                    if (!self->state.problems.count(task)) {
+                [=](init_num_atom, int512_t task, caf::actor_addr address) {
+                    if(address == self->address()) {
+                      //haven't gotten job yet
+                      if (!self->state.problems.count(task)) {
                         self->state.problems.insert(std::pair<int512_t, int512_t>(task, 0));
 
                         //check if number is prime or 2
                         if (is_probable_prime(task) || task == 2) {
-                            self->send(grp, done_msg_atom_v, task);
+                          self->send(grp, done_msg_atom_v, task, self->address());
                         } else {
-                            self->send(grp, new_num_atom_v, task, self->address());
+                          self->send(grp, new_num_atom_v, task, self->address());
                         }
+                      }
                     }
                 },
 
-                [=](result_atom, int512_t factor, int512_t problem, double time, int iteration) {
-                    int512_t currentProblem = problem;
-                    self->state.usedCPUTime = self->state.usedCPUTime + time;
-                    self->state.iterationCount = self->state.iterationCount + iteration;
+                [=](result_atom, int512_t factor, int512_t problem, double time, int iteration, caf::actor_addr address) {
+                    if(self->address() == address) {
+                      int512_t currentProblem = problem;
+                      self->state.usedCPUTime = self->state.usedCPUTime + time;
+                      self->state.iterationCount = self->state.iterationCount + iteration;
 
-                    if (self->state.problems.count(currentProblem) > 0) {
+                      if (self->state.problems.count(currentProblem) > 0) {
                         int512_t factorForProblems = self->state.problems.at(currentProblem);
                         if (factorForProblems == 0) {
-                            self->state.problems.at(currentProblem) = factor;
-                            currentProblem = currentProblem / factor;
-                            if(! self->state.problems.count(currentProblem)){
-                                self->state.problems.insert(std::pair <int512_t, int512_t> (currentProblem, 0));
-                            }
-                            //check if done
-                            if (is_probable_prime(currentProblem) || currentProblem == 2) {
-                                self->send(grp, done_msg_atom_v, currentProblem);
-                            } else {
-                                self->send(grp, client_num_atom_v, currentProblem);
-                            }
+                          self->state.problems.at(currentProblem) = factor;
+                          currentProblem = currentProblem / factor;
+                          if(! self->state.problems.count(currentProblem)){
+                            self->state.problems.insert(std::pair <int512_t, int512_t> (currentProblem, 0));
+                          }
+                          //check if done
+                          if (is_probable_prime(currentProblem) || currentProblem == 2) {
+                            self->send(grp, done_msg_atom_v, currentProblem, self->address());
+                          } else {
+                            self->send(grp, client_num_atom_v, currentProblem, self->address());
+                          }
                         }
+                      }
                     }
                 },
 
-                [=](done_msg_atom, int512_t number) {
-                    //we are done
-                    self->state.endW = std::chrono::steady_clock::now();
-                    self->state.problems.at(number) = number;
-                    std::cout << "--------------------- Found Answer ---------------------" << endl << endl;
-                    cout << "Found Factors: ";
+                [=](done_msg_atom, int512_t number, caf::actor_addr address) {
+                    if(address == self->address()) {
+                      //we are done
+                      self->state.endW = std::chrono::steady_clock::now();
+                      self->state.problems.at(number) = number;
+                      std::cout << "--------------------- Found Answer ---------------------" << endl << endl;
+                      cout << "Found Factors: ";
 
-                    for (auto elem: self->state.problems) {
+                      for (auto elem: self->state.problems) {
                         cout << elem.second << " * ";
+                      }
+                      self->state.usedWallTime = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                                   self->state.endW - self->state.beginW).count();
+                      cout << endl << "CPU time used: " << (self->state.usedCPUTime / 1000000000) << " s" << endl;
+                      cout << "Wall clock time used: " << (self->state.usedWallTime / 1000000000) << " s" << endl;
+                      cout << "Iterations: " << (self->state.iterationCount) << endl;
+                      cout << endl << "------------------ ------------------ ------------------" << endl << endl;
+                      self->state.problems.clear();
+                      self->state.usedCPUTime = 0;
+                      self->state.usedWallTime = 0;
+                      self->send(grp, block_false_atom_v, self->address());
                     }
-                    self->state.usedWallTime = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                            self->state.endW - self->state.beginW).count();
-                    cout << endl << "CPU time used: " << (self->state.usedCPUTime / 1000000000) << " s" << endl;
-                    cout << "Wall clock time used: " << (self->state.usedWallTime / 1000000000) << " s" << endl;
-                    cout << "Iterations: " << (self->state.iterationCount) << endl;
-                    cout << endl << "------------------ ------------------ ------------------" << endl << endl;
-                    self->state.problems.clear();
-                    self->state.usedCPUTime = 0;
-                    self->state.usedWallTime = 0;
-                    self->send(grp, block_false_atom_v, self->address());
                 },
 
                 [=](const group_down_msg&){
@@ -351,7 +357,9 @@ namespace {
 
                 //catch all other messages to prevent error that kills actor
                 [=](new_num_atom, int512_t N, caf::actor_addr address) {},
-                [=](client_num_atom, int512_t N) {},
+
+                [=](client_num_atom, int512_t N, caf::actor_addr address) {},
+
                 [=](block_false_atom, caf::actor_addr address) {}
         };
     }
@@ -378,7 +386,7 @@ namespace {
 
         rhoNumber rhoNum;
 
-        caf::actor_addr address;
+        caf::actor_addr currClientAddress;
     };
 
     behavior worker(stateful_actor<worker_state>* self, caf::group grp) {
@@ -386,20 +394,20 @@ namespace {
         self->join(grp);
         self->state.grp = grp;
         self->state.blocked = false;
-        self->state.address = nullptr;
+        self->state.currClientAddress = nullptr;
 
         return {
                 [=](new_num_atom, int512_t N, caf::actor_addr address) {
                     //TODO:block if other client : Clientid speichern und abfragen, wenn bearbeitung done -> clientID = 0 lokal
 
-                    if((self->state.blocked == false) || ((self->state.blocked == true) and (self->state.address == address))) {
+                    if((self->state.blocked == false) || ((self->state.blocked == true) and (self->state.currClientAddress == address))) {
 
-                      cout << "\nNEW_NUM SUCCESSFUL " << to_string(self->state.address) << endl;
+                      cout << "\nNEW_NUM SUCCESSFUL " << to_string(self->state.currClientAddress) << endl;
 
                       //set new current client address
-                      if(self->state.address != address) {
-                        self->state.address = address;
-                        cout << to_string(self->state.address) << " registered as current client" << endl;
+                      if(self->state.currClientAddress != address) {
+                        self->state.currClientAddress = address;
+                        cout << to_string(self->state.currClientAddress) << " registered as current client" << endl;
                       }
                       //block for other clients if unblocked
                       if(self->state.blocked == false) {
@@ -429,7 +437,7 @@ namespace {
                           auto t_end = std::chrono::steady_clock::now();
                           double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
-                          self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
+                          self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount, self->state.currClientAddress);
                         }
                         self->state.rhoNum = pRho(self->state.rhoNum.number);
 
@@ -442,38 +450,39 @@ namespace {
                       auto t_end = std::chrono::steady_clock::now();
                       double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
-                      self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
+                      self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount, self->state.currClientAddress);
                     }
                     //if blocked by another client
                     else {
                         cout << "\nNEW_NUM FAILED " << to_string(address) << endl;
-                        cout << to_string(address) << " is blocked by " << to_string(self->state.address) << endl;
+                        cout << to_string(address) << " is blocked by " << to_string(self->state.currClientAddress) << endl;
                         cout << "Blocked: " << self->state.blocked << endl;
                     }
                 },
 
-                [=](client_num_atom, int512_t N) {
+                [=](client_num_atom, int512_t N, caf::actor_addr address) {
+                    if(self->state.currClientAddress == address) {
+                      std::clock_t c_start = std::clock();
+                      auto t_start = std::chrono::steady_clock::now();
 
-                    std::clock_t c_start = std::clock();
-                    auto t_start = std::chrono::steady_clock::now();
+                      self->state.rhoNum = pRho(N);
 
-                    self->state.rhoNum = pRho(N);
-
-                    if(self->state.rhoNum.p == eCode) {
+                      if(self->state.rhoNum.p == eCode) {
                         if(is_probable_prime(self->state.rhoNum.number)) {
-                            std::clock_t c_end = std::clock();
-                            auto t_end = std::chrono::steady_clock::now();
-                            double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
+                          std::clock_t c_end = std::clock();
+                          auto t_end = std::chrono::steady_clock::now();
+                          double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
-                            self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
+                          self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount, self->state.currClientAddress);
                         }
                         self->state.rhoNum = pRho(self->state.rhoNum.number);
-                    }
-                    std::clock_t c_end = std::clock();
-                    auto t_end = std::chrono::steady_clock::now();
-                    double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
+                      }
+                      std::clock_t c_end = std::clock();
+                      auto t_end = std::chrono::steady_clock::now();
+                      double cpu_time_used = std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count();
 
-                    self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount);
+                      self->send(grp, result_atom_v, self->state.rhoNum.number, N, cpu_time_used, self->state.rhoNum.iterationCount, self->state.currClientAddress);
+                    }
                 },
 
                 [=](const group_down_msg&){
@@ -482,18 +491,19 @@ namespace {
                 },
 
                 //catch all messages to counter error that kills actor
-                [=](init_num_atom, int512_t task) {},
-                [=](result_atom, int512_t factor, int512_t problem, double time, int iteration){},
+                [=](init_num_atom, int512_t task, caf::actor_addr address) {},
 
-                [=](done_msg_atom, int512_t number) {},
+                [=](result_atom, int512_t factor, int512_t problem, double time, int iteration, caf::actor_addr address){},
+
+                [=](done_msg_atom, int512_t number, caf::actor_addr address) {},
 
                 [=](block_false_atom, caf::actor_addr address) {
                     //unblock if done
-                    if((self->state.address == address) and (self->state.blocked == true)) {
+                    if((self->state.currClientAddress == address) and (self->state.blocked == true)) {
                         self->state.blocked = false;
 
-                        cout << "\nDONE_MSG" << endl;
-                        cout << to_string(self->state.address) << " is done." << endl;
+                        cout << "\nBLOCK_FALSE_ATOM" << endl;
+                        cout << to_string(self->state.currClientAddress) << " is done." << endl;
                         cout << "Blocked: " << self->state.blocked << endl;
                     }
                 }
