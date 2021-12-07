@@ -29,9 +29,9 @@ CAF_PUSH_WARNINGS
 
 
 #define SERVER_IP "localhost"
-#define SERVER_PORT 5000
-#define NUM_WORKER 4 //fix number of workers
-#define MODE "client" //"worker" //"server" //"client"
+#define SERVER_PORT 5001
+#define NUM_WORKER 1 //fix number of workers
+#define MODE "worker" //"worker" //"server" //"client"
 
 
 using std::cerr;
@@ -252,17 +252,23 @@ namespace {
         //end of factorization
         std::chrono::steady_clock::time_point endW;
         double usedWallTime;
+
+        int512_t currentProblem;
+        int512_t task1;
     };
 
     behavior client(stateful_actor<client_state>* self, caf::group grp) {
         // Join group and save it to send messages later.
         self->join(grp);
         self->state.grp = grp;
+        self->state.currentProblem = 0;
+        self->state.task1 = 0;
 
         string input;
         cout << "Enter number to factorize: " << endl;
         std::getline(std::cin, input);
         int512_t task = boost::lexical_cast<int512_t>(input);
+
 
         if (task == -1) {
             task = Z1;
@@ -279,12 +285,14 @@ namespace {
             task = Z2;
         }
 */
+        self->state.task1 = task;
         self->state.beginW = std::chrono::steady_clock::now();
         self->send(grp, init_num_atom_v, task, self->address());
 
         return {
                 //new job from user
                 [=](init_num_atom, int512_t task, caf::actor_addr address) {
+
                     if(address == self->address()) {
                       //haven't gotten job yet
                       if (!self->state.problems.count(task)) {
@@ -302,23 +310,23 @@ namespace {
 
                 [=](result_atom, int512_t factor, int512_t problem, double time, int iteration, caf::actor_addr address) {
                     if(self->address() == address) {
-                      int512_t currentProblem = problem;
+                      self->state.currentProblem = problem;
                       self->state.usedCPUTime = self->state.usedCPUTime + time;
                       self->state.iterationCount = self->state.iterationCount + iteration;
 
-                      if (self->state.problems.count(currentProblem) > 0) {
-                        int512_t factorForProblems = self->state.problems.at(currentProblem);
+                      if (self->state.problems.count(self->state.currentProblem) > 0) {
+                        int512_t factorForProblems = self->state.problems.at(self->state.currentProblem);
                         if (factorForProblems == 0) {
-                          self->state.problems.at(currentProblem) = factor;
-                          currentProblem = currentProblem / factor;
-                          if(! self->state.problems.count(currentProblem)){
-                            self->state.problems.insert(std::pair <int512_t, int512_t> (currentProblem, 0));
+                          self->state.problems.at(self->state.currentProblem) = factor;
+                          self->state.currentProblem = self->state.currentProblem / factor;
+                          if(! self->state.problems.count(self->state.currentProblem)){
+                            self->state.problems.insert(std::pair <int512_t, int512_t> (self->state.currentProblem, 0));
                           }
                           //check if done
-                          if (is_probable_prime(currentProblem) || currentProblem == 2) {
-                            self->send(grp, done_msg_atom_v, currentProblem, self->address());
+                          if (is_probable_prime(self->state.currentProblem) || self->state.currentProblem == 2) {
+                            self->send(grp, done_msg_atom_v, self->state.currentProblem, self->address());
                           } else {
-                            self->send(grp, client_num_atom_v, currentProblem, self->address());
+                            self->send(grp, client_num_atom_v, self->state.currentProblem, self->address());
                           }
                         }
                       }
@@ -346,6 +354,7 @@ namespace {
                       self->state.usedCPUTime = 0;
                       self->state.usedWallTime = 0;
                       self->send(grp, block_false_atom_v, self->address());
+                      self->quit();
                     }
                 },
 
@@ -360,7 +369,20 @@ namespace {
 
                 [=](client_num_atom, int512_t N, caf::actor_addr address) {},
 
-                [=](block_false_atom, caf::actor_addr address) {}
+                [=](block_false_atom, caf::actor_addr address) {
+                  if(address != self->address()) {
+                    self->send(grp, new_num_atom_v, self->state.task1, self->address());
+                  }
+                },
+
+                [=](available_atom) {
+                  if(self->state.currentProblem != 0) {
+                    self->send(grp, client_num_atom_v, self->state.currentProblem, self->address());
+                  }
+                  else {
+                    self->send(grp, client_num_atom_v, self->state.task1, self->address());
+                  }
+                }
         };
     }
 
@@ -395,6 +417,8 @@ namespace {
         self->state.grp = grp;
         self->state.blocked = false;
         self->state.currClientAddress = nullptr;
+        //(new) worker is available for work
+        self->send(grp, available_atom_v);
 
         return {
                 [=](new_num_atom, int512_t N, caf::actor_addr address) {
@@ -461,7 +485,17 @@ namespace {
                 },
 
                 [=](client_num_atom, int512_t N, caf::actor_addr address) {
-                    if(self->state.currClientAddress == address) {
+                    cout << "New task for worker.." << endl;
+                    if(self->state.currClientAddress == address || self->state.currClientAddress == nullptr) {
+                      if(self->state.currClientAddress == nullptr) {
+                        self->state.currClientAddress = address;
+                        cout << "New Client set: " << to_string(address) << endl;
+                        //block for other clients if unblocked
+                        if(self->state.blocked == false) {
+                          self->state.blocked = true;
+                          cout << "Blocked: " << self->state.blocked << endl;
+                        }
+                      }
                       std::clock_t c_start = std::clock();
                       auto t_start = std::chrono::steady_clock::now();
 
@@ -501,12 +535,15 @@ namespace {
                     //unblock if done
                     if((self->state.currClientAddress == address) and (self->state.blocked == true)) {
                         self->state.blocked = false;
+                        cout << to_string(self->state.currClientAddress) << " is done." << endl;
+                        self->state.currClientAddress = nullptr;
 
                         cout << "\nBLOCK_FALSE_ATOM" << endl;
-                        cout << to_string(self->state.currClientAddress) << " is done." << endl;
+
                         cout << "Blocked: " << self->state.blocked << endl;
                     }
-                }
+                },
+                [=](available_atom) {}
         };
     }
 
